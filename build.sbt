@@ -9,8 +9,7 @@ libraryDependencies ++= Seq(
   "com.github.outwatch.outwatch" %%% "outwatch" % "961d3de",
   "com.github.outwatch.outwatch" %%% "outwatch-util" % "961d3de",
   "org.scalatest" %%% "scalatest" % "3.0.8" % Test,
-  "io.circe" %%% "circe-core" % "0.13.0",
-  "io.circe" %%% "circe-parser" % "0.13.0"
+  "com.typesafe.play" %%% "play-json" % "2.8.1"
 )
 
 enablePlugins(ScalaJSBundlerPlugin)
