@@ -1,20 +1,18 @@
 package jsonviewer
 
+import cats.effect.IO
+import colibri.{Observable, Observer}
 import outwatch._
 import outwatch.dsl._
-import colibri.{Observable, Observer}
 import outwatch.util.{Reducer, Store}
-import cats.effect.IO
-
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits._
-import scala.scalajs.js.Thenable.Implicits._
-import scala.scalajs.js
-import scala.scalajs.js.Promise
 import play.api.libs.json.{JsNull, _}
 
 import scala.collection.immutable._
+import scala.concurrent.ExecutionContext.Implicits._
+import scala.scalajs.js
+import scala.scalajs.js.Promise
 import scala.util.{Failure, Success, Try}
+import libs.humanizeString
 
 case class Model(counter: Int, json: Option[JsValue])
 
@@ -30,7 +28,6 @@ object Jsonviewer {
 
   def main(args: Array[String]): Unit = {
     val reducer = Reducer.withOptionalEffects[Observable, Action, Model]((model: Model, action: Action) => {
-      println(model, action)
       action match {
         case Init => (model, None)
         case ImportFromClipboard =>
@@ -92,7 +89,7 @@ object Jsonviewer {
       case JsObject(kvs) => dl(cls := s"uk-description-list json-object-display level-$level").apply(
         kvs.flatMap {
           case (k, v) => List(
-            dt(renderJson(JsString(k), level)),
+            dt(humanizeString(k)),
             dd(div(renderJson(v, level + 1)))
           )
         }.toList
@@ -121,7 +118,7 @@ object Jsonviewer {
             val props = getAllProps(childObjects)
             table(
               cls := "uk-table uk-table-divider",
-              tr.apply(props.map(th(_)).toList),
+              tr.apply(props.map(s => th(humanizeString(s))).toList),
               childObjects.map {
                 case JsObject(m) =>
                   tr.apply(
