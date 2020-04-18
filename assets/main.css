@@ -11,16 +11,39 @@
 }
 
 .json-object-display {
-    border-left: 1px solid lightgray;
-    padding-left: 5px;
+    border-left: 1px solid;
+    padding-left: 12px;
 }
 
-.json-object-display dt {
-    margin-bottom: 5px;
+.json-object-display.level-0 {
+    border-color: #0074D9;
+}
+.json-object-display.level-1 {
+    border-color: #2ECC40;
+}
+.json-object-display.level-1 {
+    border-color: #FFDC00;
+}
+.json-object-display.level-2 {
+    border-color: #F012BE;
+}
+.json-object-display.level-3 {
+    border-color: #FF851B;
+}
+.json-object-display.level-4 {
+    border-color: #001f3f;
+}
+.json-object-display.level-5 {
+    border-color: #FF4136;
+}
+
+.json-object-display > dt {
+    margin-bottom: 15px;
+    font-weight: 500 !important;
 }
 
 .json-object-display dd {
-    padding-left: 12px;
+    padding-left: 20px;
 }
 
 .horiz-list {

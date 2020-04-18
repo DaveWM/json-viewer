@@ -13,7 +13,8 @@ import scala.scalajs.js
 import scala.scalajs.js.Promise
 import play.api.libs.json.{JsNull, _}
 
-import scala.util.Try
+import scala.collection.immutable._
+import scala.util.{Failure, Success, Try}
 
 case class Model(counter: Int, json: Option[JsValue])
 
@@ -55,74 +56,124 @@ object Jsonviewer {
       }
     }
 
-    def renderJson(json: JsValue): HtmlVNode = json match {
+    def getAllProps(xs: List[JsObject]): Set[String] = {
+      xs.flatMap {
+      case JsObject(m) => m.keySet
+      case _ => Set.empty
+    }.foldRight(Set.empty[String])((k, ks: Set[String]) => ks + k)
+    }
+
+    def canRenderAsTable(xs: List[JsValue]): Boolean = {
+      val allProps = getAllProps(xs.collect {
+        case x: JsObject => x
+      })
+
+      val sharedProps = allProps.filter(p => {
+        xs.forall {
+          case JsObject(m) => m.keySet.contains(p)
+          case _ => false
+        }
+      })
+
+      xs.forall(v =>
+        v.isInstanceOf[JsObject] &&
+        (sharedProps.size >= allProps.size - 5) &&
+        xs.forall {
+          case JsObject(m) => m.values.forall(v => !v.isInstanceOf[JsObject] && !v.isInstanceOf[JsArray])
+        }
+      )
+    }
+
+    def renderJson(json: JsValue, level: Int): HtmlVNode = json match {
       case JsNull => span("Null!")
       case JsNumber(n) => span(n.toString())
       case JsBoolean(b) => span(if (b) "True" else "False")
       case JsString(s) => span(s)
-      case JsObject(kvs) => dl(cls := "uk-description-list json-object-display").apply(
+      case JsObject(kvs) => dl(cls := s"uk-description-list json-object-display level-$level").apply(
         kvs.flatMap {
           case (k, v) => List(
-            dt(renderJson(JsString(k))),
-            dd(div(renderJson(v)))
+            dt(renderJson(JsString(k), level)),
+            dd(div(renderJson(v, level + 1)))
           )
         }.toList
       )
       case JsArray(xs) =>
         xs.toList match {
-          case x :: Nil => renderJson(x)
+          case x :: Nil => renderJson(x, level + 1)
           case List() => span("<< Empty List >>")
-          case _ if xs.length < 5 && xs.forall(_.isInstanceOf[JsObject]) =>
+          case xs if xs.length < 5 && xs.forall(_.isInstanceOf[JsObject]) =>
             div(
               ul(attr("data-uk-tab") := "").apply(
                 xs.zipWithIndex.map {
                   case (value, idx) => li(a(href := "#", s"Item $idx"))
-                }.toList
+                }
               ),
               ul(cls := "uk-switcher uk-margin").apply(
-                xs.map(x => li(renderJson(x))).toList
+                xs.map(x => li(renderJson(x, level + 1)))
               )
             )
-          case _ if xs.length < 5 && xs.forall(x => x.isInstanceOf[JsNumber] || x.isInstanceOf[JsString] || x.isInstanceOf[JsBoolean] || x == JsNull) =>
+          case xs if xs.length < 5 && xs.forall(x => x.isInstanceOf[JsNumber] || x.isInstanceOf[JsString] || x.isInstanceOf[JsBoolean] || x == JsNull) =>
             div(cls := "horiz-list").apply(
-              intersperse(xs.map(renderJson).toList, span(", "))
+              intersperse(xs.map(renderJson(_, level + 1)), span(", "))
             )
-          case x :: rest => {
-            ul(cls := "uk-list uk-list-bullet").apply(
-              xs.map(x => li(renderJson(x))).toList
+          case xs if canRenderAsTable(xs) => {
+            val childObjects = xs.collect { case x: JsObject => x}
+            val props = getAllProps(childObjects)
+            table(
+              cls := "uk-table uk-table-divider",
+              tr.apply(props.map(th(_)).toList),
+              childObjects.map {
+                case JsObject(m) =>
+                  tr.apply(
+                    props.map(p => td(m.get(p).map(renderJson(_, level + 1)).getOrElse(""))).toList
+                  )
+              }
             )
           }
+
+          case x :: rest =>
+            ul(cls := "uk-list uk-list-bullet").apply(
+              xs.map(x => li(renderJson(x, level + 1))).toList
+            )
         }
     }
 
-    def view(state: Model, dispatch: Observer[Action]) =
-      div(
+    def view(state: Model, dispatch: Observer[Action]) = {
+      val tryView: Try[HtmlVNode] = Try {
         div(
-          cls := "uk-navbar-container",
-          id := "header-bar",
           div(
-            cls := "uk-navbar-left",
+            cls := "uk-navbar-container",
+            id := "header-bar",
             div(
-              cls := "uk-navbar-item uk-logo logo",
-              "JSON Viewer"
+              cls := "uk-navbar-left",
+              div(
+                cls := "uk-navbar-item uk-logo logo",
+                "JSON Viewer"
+              )
             )
-          )
-        ),
-        div(
-          cls := "uk-section",
+          ),
           div(
-            cls := "uk-container",
-            button(
-              cls := "uk-button uk-button-primary", onClick.use(ImportFromClipboard) --> dispatch,
-              "Import from Clipboard"
-            ),
+            cls := "uk-section",
             div(
-              cls := "uk-card uk-card-default uk-card-body json-display",
-              state.json.map(renderJson).getOrElse(p(cls := "uk-lead", "Please import some JSON to get started"))
+              cls := "uk-container",
+              button(
+                cls := "uk-button uk-button-primary", onClick.use(ImportFromClipboard) --> dispatch,
+                "Import from Clipboard"
+              ),
+              div(
+                cls := "uk-card uk-card-default uk-card-body json-display",
+                state.json.map(renderJson(_, 0)).getOrElse(p(cls := "uk-lead", "Please import some JSON to get started"))
+              )
             )
           )
         )
-      )
+      }
+
+      tryView match {
+        case Success(v) => v
+        case Failure(f) => div("something broke: ", f.toString)
+      }
+    }
 
     val app = for {
       store <- Store.create[IO](Init, new Model(0, None), reducer)
