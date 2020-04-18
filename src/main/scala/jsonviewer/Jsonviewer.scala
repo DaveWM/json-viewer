@@ -84,7 +84,11 @@ object Jsonviewer {
     def renderJson(json: JsValue, level: Int): HtmlVNode = json match {
       case JsNull => span("Null!")
       case JsNumber(n) => span(n.toString())
-      case JsBoolean(b) => span(if (b) "True" else "False")
+      case JsBoolean(b) => {
+        val icon = if (b) "check" else "close"
+        val colour = if (b) "limegreen" else "red"
+        span(attr("uk-icon") := icon, style("color") := colour)
+      }
       case JsString(s) => span(s)
       case JsObject(kvs) => dl(cls := s"uk-description-list json-object-display level-$level").apply(
         kvs.flatMap {
@@ -97,7 +101,7 @@ object Jsonviewer {
       case JsArray(xs) =>
         xs.toList match {
           case x :: Nil => renderJson(x, level + 1)
-          case List() => span("<< Empty List >>")
+          case List() => span(cls := "uk-label", "Empty")
           case xs if xs.length < 5 && xs.forall(_.isInstanceOf[JsObject]) =>
             div(
               ul(attr("data-uk-tab") := "").apply(
