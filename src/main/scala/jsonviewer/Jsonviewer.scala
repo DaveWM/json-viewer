@@ -104,7 +104,7 @@ object Jsonviewer {
           case List() => span(cls := "uk-label", "Empty")
           case xs if xs.length < 5 && xs.forall(_.isInstanceOf[JsObject]) =>
             div(
-              ul(attr("data-uk-tab") := "").apply(
+              ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
                 xs.zipWithIndex.map {
                   case (value, idx) => li(a(href := "#", s"Item $idx"))
                 }
