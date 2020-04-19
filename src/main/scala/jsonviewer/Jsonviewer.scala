@@ -20,9 +20,7 @@ sealed trait Action
 
 case object Init extends Action
 
-case object ImportFromClipboard extends Action
-
-case class ImportComplete(text: String) extends Action
+case class InputChanged(text: String) extends Action
 
 object Jsonviewer {
 
@@ -30,10 +28,7 @@ object Jsonviewer {
     val reducer = Reducer.withOptionalEffects[Observable, Action, Model]((model: Model, action: Action) => {
       action match {
         case Init => (model, None)
-        case ImportFromClipboard =>
-          val clipboardContents: Promise[String] = js.Dynamic.global.navigator.clipboard.readText().asInstanceOf[Promise[String]]
-          (model, Some(Observable.fromFuture(clipboardContents.toFuture).map(ImportComplete)))
-        case ImportComplete(text) =>
+        case InputChanged(text) =>
           val json = Try {
             Json.parse(text)
           }.toEither
@@ -157,14 +152,18 @@ object Jsonviewer {
             cls := "uk-section",
             div(
               cls := "uk-container",
-              button(
-                cls := "uk-button uk-button-primary", onClick.use(ImportFromClipboard) --> dispatch,
-                "Import from Clipboard"
+              textArea(
+                cls := "uk-textarea",
+                placeholder := "Enter JSON here",
+                rows := 5,
+                onInput.value.map(InputChanged) --> dispatch
               ),
-              div(
-                cls := "uk-card uk-card-default uk-card-body json-display",
-                state.json.map(renderJson(_, 0)).getOrElse(p(cls := "uk-lead", "Please import some JSON to get started"))
-              )
+              state.json.map(json => {
+                div(
+                  cls := "uk-card uk-card-default uk-card-body json-display",
+                  renderJson(json, 0)
+                )
+              })
             )
           )
         )
