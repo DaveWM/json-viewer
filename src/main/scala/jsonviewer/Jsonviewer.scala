@@ -57,39 +57,46 @@ object Jsonviewer {
 
       xs.forall(v =>
         v.isObject &&
-        (sharedProps.size >= allProps.size - 5) &&
-        xs.forall(_.asObject.exists(m => m.values.forall(v => !v.isObject && !v.isArray)))
+          (sharedProps.size >= allProps.size - 5) &&
+          xs.forall(_.asObject.exists(m => m.values.forall(v => !v.isObject && !v.isArray)))
       )
     }
 
-    def renderJson(json: Json, level: Int): HtmlVNode = {
-          json.fold(
-            span("Null!"),
+    def emptyElement(label: String): HtmlVNode = {
+      span(cls := "uk-label", label)
+    }
 
-            (b: Boolean) => {
-              val icon = if (b) "check" else "close"
-              val colour = if (b) "limegreen" else "red"
-              span(attr("uk-icon") := icon, style("color") := colour)
-            },
+    def renderJson(json: Json, level: Int): HtmlVNode =
+      json.fold(
+        emptyElement("Null"),
 
-            (n: JsonNumber) => span(n.toString()),
+        (b: Boolean) => {
+          val icon = if (b) "check" else "close"
+          val colour = if (b) "limegreen" else "red"
+          span(attr("uk-icon") := icon, style("color") := colour)
+        },
 
-            (s: String) => span(s),
+        (n: JsonNumber) => span(n.toString()),
 
-            (xs: Vector[Json]) =>
-              xs.toList match {
-                case x :: Nil => renderJson(x, level + 1)
-                case List() => span(cls := "uk-label", "Empty")
-                case xs if xs.length < 5 && xs.forall(_.isObject) =>
-                  div(
-                    ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
-                      xs.zipWithIndex.map {
-                        case (value, idx) => li(a(href := "#", s"Item $idx"))
-                      }
-                    ),
-                    ul(cls := "uk-switcher uk-margin").apply(
-                      xs.map(x => li(renderJson(x, level + 1)))
-                    )
+        {
+          case "" => emptyElement("Empty String")
+          case s => span(s)
+        },
+
+        (xs: Vector[Json]) =>
+          xs.toList match {
+            case x :: Nil => renderJson(x, level + 1)
+            case List() => emptyElement("Empty List")
+            case xs if xs.length < 5 && xs.forall(_.isObject) =>
+              div(
+                ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
+                  xs.zipWithIndex.map {
+                    case (value, idx) => li(a(href := "#", s"Item $idx"))
+                  }
+                ),
+                ul(cls := "uk-switcher uk-margin").apply(
+                  xs.map(x => li(renderJson(x, level + 1)))
+                )
                   )
                 case xs if xs.length < 5 && xs.forall(x => x.isNumber || x.isString || x.isBoolean || x.isNull) =>
                   div(cls := "horiz-list").apply(
@@ -108,22 +115,25 @@ object Jsonviewer {
                     )
                   )
                 }
-                case x :: rest =>
-                  ul(cls := "uk-list uk-list-bullet").apply(
-                    xs.map(x => li(renderJson(x, level + 1))).toList
-                  )
-              },
+            case x :: rest =>
+              ul(cls := "uk-list uk-list-bullet").apply(
+                xs.map(x => li(renderJson(x, level + 1))).toList
+              )
+          },
 
-            (o: JsonObject) => dl(cls := s"uk-description-list json-object-display level-$level").apply(
-              o.toMap.flatMap {
+        (o: JsonObject) =>
+          if (o.isEmpty)
+            emptyElement("Empty Object")
+          else
+            dl(cls := s"uk-description-list json-object-display level-$level").apply(
+              o.toIterable.flatMap {
                 case (k, v) => List(
                   dt(humanizeString(k)),
                   dd(div(renderJson(v, level + 1)))
                 )
               }.toList
             )
-          )
-    }
+      )
 
     def view(state: Model, dispatch: Observer[Action]) = {
       val tryView: Try[HtmlVNode] = Try {
