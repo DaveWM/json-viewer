@@ -5,11 +5,15 @@
 scalaVersion := "2.13.0"
 resolvers += "jitpack" at "https://jitpack.io"
 
+val circeVersion = "0.12.3"
+
 libraryDependencies ++= Seq(
   "com.github.outwatch.outwatch" %%% "outwatch" % "961d3de",
   "com.github.outwatch.outwatch" %%% "outwatch-util" % "961d3de",
   "org.scalatest" %%% "scalatest" % "3.0.8" % Test,
-  "com.typesafe.play" %%% "play-json" % "2.8.1"
+  "io.circe" %%% "circe-core" % circeVersion,
+  "io.circe" %%% "circe-generic" % circeVersion,
+  "io.circe" %%% "circe-parser" % circeVersion
 )
 
 enablePlugins(ScalaJSBundlerPlugin)

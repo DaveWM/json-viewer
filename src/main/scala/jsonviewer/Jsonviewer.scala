@@ -2,19 +2,18 @@ package jsonviewer
 
 import cats.effect.IO
 import colibri.{Observable, Observer}
+import io.circe._
+import io.circe.parser._
+import libs.humanizeString
 import outwatch._
 import outwatch.dsl._
 import outwatch.util.{Reducer, Store}
-import play.api.libs.json.{JsNull, _}
 
 import scala.collection.immutable._
-import scala.concurrent.ExecutionContext.Implicits._
 import scala.scalajs.js
-import scala.scalajs.js.Promise
 import scala.util.{Failure, Success, Try}
-import libs.humanizeString
 
-case class Model(counter: Int, json: Option[JsValue])
+case class Model(counter: Int, json: Option[Json])
 
 sealed trait Action
 
@@ -29,10 +28,7 @@ object Jsonviewer {
       action match {
         case Init => (model, None)
         case InputChanged(text) =>
-          val json = Try {
-            Json.parse(text)
-          }.toEither
-          val newModel = json match {
+          val newModel = parse(text) match {
             case Left(_) => model
             case Right(json) => model.copy(json = Some(json))
           }
@@ -48,90 +44,85 @@ object Jsonviewer {
       }
     }
 
-    def getAllProps(xs: List[JsObject]): Set[String] = {
-      xs.flatMap {
-      case JsObject(m) => m.keySet
-      case _ => Set.empty
-    }.foldRight(Set.empty[String])((k, ks: Set[String]) => ks + k)
+    def getAllProps(xs: List[JsonObject]): Set[String] = {
+      xs.flatMap(_.keys).toSet
     }
 
-    def canRenderAsTable(xs: List[JsValue]): Boolean = {
-      val allProps = getAllProps(xs.collect {
-        case x: JsObject => x
-      })
+    def canRenderAsTable(xs: List[Json]): Boolean = {
+      val allProps: Set[String] = getAllProps(xs.flatMap(_.asObject))
 
       val sharedProps = allProps.filter(p => {
-        xs.forall {
-          case JsObject(m) => m.keySet.contains(p)
-          case _ => false
-        }
+        xs.forall(_.asObject.exists(o => o.keys.toSet.contains(p)))
       })
 
       xs.forall(v =>
-        v.isInstanceOf[JsObject] &&
+        v.isObject &&
         (sharedProps.size >= allProps.size - 5) &&
-        xs.forall {
-          case JsObject(m) => m.values.forall(v => !v.isInstanceOf[JsObject] && !v.isInstanceOf[JsArray])
-        }
+        xs.forall(_.asObject.exists(m => m.values.forall(v => !v.isObject && !v.isArray)))
       )
     }
 
-    def renderJson(json: JsValue, level: Int): HtmlVNode = json match {
-      case JsNull => span("Null!")
-      case JsNumber(n) => span(n.toString())
-      case JsBoolean(b) => {
-        val icon = if (b) "check" else "close"
-        val colour = if (b) "limegreen" else "red"
-        span(attr("uk-icon") := icon, style("color") := colour)
-      }
-      case JsString(s) => span(s)
-      case JsObject(kvs) => dl(cls := s"uk-description-list json-object-display level-$level").apply(
-        kvs.flatMap {
-          case (k, v) => List(
-            dt(humanizeString(k)),
-            dd(div(renderJson(v, level + 1)))
-          )
-        }.toList
-      )
-      case JsArray(xs) =>
-        xs.toList match {
-          case x :: Nil => renderJson(x, level + 1)
-          case List() => span(cls := "uk-label", "Empty")
-          case xs if xs.length < 5 && xs.forall(_.isInstanceOf[JsObject]) =>
-            div(
-              ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
-                xs.zipWithIndex.map {
-                  case (value, idx) => li(a(href := "#", s"Item $idx"))
-                }
-              ),
-              ul(cls := "uk-switcher uk-margin").apply(
-                xs.map(x => li(renderJson(x, level + 1)))
-              )
-            )
-          case xs if xs.length < 5 && xs.forall(x => x.isInstanceOf[JsNumber] || x.isInstanceOf[JsString] || x.isInstanceOf[JsBoolean] || x == JsNull) =>
-            div(cls := "horiz-list").apply(
-              intersperse(xs.map(renderJson(_, level + 1)), span(", "))
-            )
-          case xs if canRenderAsTable(xs) => {
-            val childObjects = xs.collect { case x: JsObject => x}
-            val props = getAllProps(childObjects)
-            table(
-              cls := "uk-table uk-table-divider",
-              tr.apply(props.map(s => th(humanizeString(s))).toList),
-              childObjects.map {
-                case JsObject(m) =>
-                  tr.apply(
-                    props.map(p => td(m.get(p).map(renderJson(_, level + 1)).getOrElse(""))).toList
-                  )
-              }
-            )
-          }
+    def renderJson(json: Json, level: Int): HtmlVNode = {
+          json.fold(
+            span("Null!"),
 
-          case x :: rest =>
-            ul(cls := "uk-list uk-list-bullet").apply(
-              xs.map(x => li(renderJson(x, level + 1))).toList
+            (b: Boolean) => {
+              val icon = if (b) "check" else "close"
+              val colour = if (b) "limegreen" else "red"
+              span(attr("uk-icon") := icon, style("color") := colour)
+            },
+
+            (n: JsonNumber) => span(n.toString()),
+
+            (s: String) => span(s),
+
+            (xs: Vector[Json]) =>
+              xs.toList match {
+                case x :: Nil => renderJson(x, level + 1)
+                case List() => span(cls := "uk-label", "Empty")
+                case xs if xs.length < 5 && xs.forall(_.isObject) =>
+                  div(
+                    ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
+                      xs.zipWithIndex.map {
+                        case (value, idx) => li(a(href := "#", s"Item $idx"))
+                      }
+                    ),
+                    ul(cls := "uk-switcher uk-margin").apply(
+                      xs.map(x => li(renderJson(x, level + 1)))
+                    )
+                  )
+                case xs if xs.length < 5 && xs.forall(x => x.isNumber || x.isString || x.isBoolean || x.isNull) =>
+                  div(cls := "horiz-list").apply(
+                    intersperse(xs.map(renderJson(_, level + 1)), span(", "))
+                  )
+                case xs if canRenderAsTable(xs) => {
+                  val childObjects: List[JsonObject] = xs.flatMap { _.asObject }
+                  val props = getAllProps(childObjects)
+                  table(
+                    cls := "uk-table uk-table-divider",
+                    tr.apply(props.map(s => th(humanizeString(s))).toList),
+                    childObjects.map(o =>
+                      tr.apply(
+                        props.map(p => td(o.toMap.get(p).map(renderJson(_, level + 1)).getOrElse(""))).toList
+                      )
+                    )
+                  )
+                }
+                case x :: rest =>
+                  ul(cls := "uk-list uk-list-bullet").apply(
+                    xs.map(x => li(renderJson(x, level + 1))).toList
+                  )
+              },
+
+            (o: JsonObject) => dl(cls := s"uk-description-list json-object-display level-$level").apply(
+              o.toMap.flatMap {
+                case (k, v) => List(
+                  dt(humanizeString(k)),
+                  dd(div(renderJson(v, level + 1)))
+                )
+              }.toList
             )
-        }
+          )
     }
 
     def view(state: Model, dispatch: Observer[Action]) = {
