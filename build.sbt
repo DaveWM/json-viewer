@@ -17,6 +17,7 @@ libraryDependencies ++= Seq(
 )
 
 enablePlugins(ScalaJSBundlerPlugin)
+scalaJSUseMainModuleInitializer := true
 scalacOptions += "-P:scalajs:sjsDefinedByDefault"
 useYarn := true // makes scalajs-bundler use yarn instead of npm
 npmDependencies in Compile += "humanize-string" -> "2.1.0"
