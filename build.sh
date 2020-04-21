@@ -6,6 +6,7 @@ if ! which sbt; then
   export PATH="$PATH:$(pwd)/sbt/bin"
 fi
 
+npm i -g yarn
 
 sbt fullOptJS::webpack
 cp target/scala-2.13/scalajs-bundler/main/jsonviewer-opt-bundle.js public/main.js
