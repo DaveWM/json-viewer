@@ -1,9 +1,12 @@
 package jsonviewer
 
-import cats.effect.IO
+import cats.effect.{IO, SyncIO}
+import cats.effect.implicits._
+import colibri.effect.RunSyncEffect
+import io.circe.generic.auto._
 import colibri.{Observable, Observer}
 import io.circe._
-import io.circe.parser._
+import io.circe.parser._, io.circe.syntax._
 import libs.humanizeString
 import outwatch._
 import outwatch.dsl._
@@ -13,7 +16,7 @@ import scala.collection.immutable._
 import scala.scalajs.js
 import scala.util.{Failure, Success, Try}
 
-case class Model(counter: Int, json: Option[Json])
+case class Model(input: String, json: Option[Json])
 
 sealed trait Action
 
@@ -22,6 +25,19 @@ case object Init extends Action
 case class InputChanged(text: String) extends Action
 
 object Jsonviewer {
+  val localStorageKey = "json-viewer-state"
+
+  def getStateFromLocalStorage: SyncIO[Option[Model]] =
+    SyncIO({
+      val storedData: String = js.Dynamic.global.localStorage.getItem(localStorageKey).asInstanceOf[String]
+      decode[Model](storedData).toOption
+    })
+
+  def saveStateToLocalStorage(model: Model): SyncIO[Unit] =
+    SyncIO({
+      val serialisedState = model.asJson
+      js.Dynamic.global.localStorage.setItem(localStorageKey, serialisedState.toString())
+    })
 
   def main(args: Array[String]): Unit = {
     val reducer = Reducer.withOptionalEffects[Observable, Action, Model]((model: Model, action: Action) => {
@@ -29,8 +45,8 @@ object Jsonviewer {
         case Init => (model, None)
         case InputChanged(text) =>
           val newModel = parse(text) match {
-            case Left(_) => model
-            case Right(json) => model.copy(json = Some(json))
+            case Left(_) => model.copy(input=text)
+            case Right(json) => model.copy(input=text, json = Some(json))
           }
           (newModel, None)
       }
@@ -157,7 +173,8 @@ object Jsonviewer {
                 cls := "uk-textarea",
                 placeholder := "Enter JSON here",
                 rows := 5,
-                onInput.value.map(InputChanged) --> dispatch
+                onInput.value.map(InputChanged) --> dispatch,
+                value := state.input
               ),
               state.json.map(json => {
                 div(
@@ -177,10 +194,14 @@ object Jsonviewer {
     }
 
     val app = for {
-      store <- Store.create[IO](Init, new Model(0, None), reducer)
+      model <- getStateFromLocalStorage
+      store <- Store.create[SyncIO](Init, model.getOrElse(new Model("", None)), reducer)
       viewStream = store.map(am => view(am._2, store))
       _ = viewStream.foreach(_ => js.Dynamic.global.window.mdc.autoInit())
-      _ <- OutWatch.renderInto[IO]("#app", div(viewStream))
+      _ = store.mapSync {
+        case (action, model) => saveStateToLocalStorage(model)
+      }.foreach(_ => ())
+      _ <- OutWatch.renderInto[SyncIO]("#app", div(viewStream))
     } yield ()
 
     app.unsafeRunSync()
