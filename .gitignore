@@ -1,3 +1,5 @@
 target/
 .idea/
 project/target/
+public/main.js
+publis/main.css
