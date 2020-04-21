@@ -5,3 +5,4 @@
 
 [build]
   publish = "public"
+  command = "bash build.sh"
