@@ -39,8 +39,8 @@ object view {
 
   def extractName(obj: JsonObject): Option[HtmlVNode] = {
     val nameProps = List("name", "title", "id")
-    nameProps
-      .find(p => obj.keys.exists(k => k.toLowerCase == p))
+    obj.keys
+      .find(k => nameProps.exists(p => k.toLowerCase() == p))
       .flatMap(k => obj(k))
       .filter(v => v.isNull || v.isBoolean || v.isString || v.isNumber)
       .map(renderJson(_, List.empty))
