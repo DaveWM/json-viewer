@@ -22,7 +22,7 @@ object view {
       v.isObject &&
         (sharedProps.size >= allProps.size - 5) &&
         xs.forall(_.asObject.exists(m => m.values.forall(v => !v.isObject && !v.isArray)))
-    )
+    ) && xs.length > 1
   }
 
   def emptyElement(label: String): HtmlVNode = {
@@ -48,9 +48,8 @@ object view {
 
       (xs: Vector[Json]) =>
         xs.toList match {
-          case x :: Nil => renderJson(x, level + 1)
           case List() => emptyElement("Empty List")
-          case xs if xs.length < 5 && xs.forall(_.isObject) =>
+          case xs if xs.length > 1 && xs.length < 5 && xs.forall(_.isObject) =>
             div(
               ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
                 xs.zipWithIndex.map {
@@ -61,7 +60,7 @@ object view {
                 xs.map(x => li(renderJson(x, level + 1)))
               )
             )
-          case xs if xs.length < 5 && xs.forall(x => x.isNumber || x.isString || x.isBoolean || x.isNull) =>
+          case xs if xs.length > 1 && xs.length < 5 && xs.forall(x => x.isNumber || x.isString || x.isBoolean || x.isNull) =>
             div(cls := "horiz-list").apply(
               intersperse(xs.map(renderJson(_, level + 1)), span(", "))
             )
