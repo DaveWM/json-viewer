@@ -40,7 +40,7 @@ object view {
   def extractName(obj: JsonObject): Option[HtmlVNode] = {
     val nameProps = List("name", "title", "id")
     obj.keys
-      .find(k => nameProps.exists(p => k.toLowerCase() == p))
+      .find(k => nameProps.contains(k.toLowerCase()))
       .flatMap(k => obj(k))
       .filter(v => v.isNull || v.isBoolean || v.isString || v.isNumber)
       .map(renderJson(_, List.empty))
@@ -60,7 +60,7 @@ object view {
 
       {
         case "" => emptyElement("Empty String")
-        case s => span(s)
+        case s => linkifyText(s)
       },
 
       (xs: Vector[Json]) =>
