@@ -4,7 +4,6 @@ import cats.effect.SyncIO
 import io.circe.parser._
 import jsonviewer.reducer.Model
 import io.circe.generic.auto._, io.circe.syntax._
-
 import scala.scalajs.js
 
 

@@ -60,7 +60,7 @@ object view {
 
       {
         case "" => emptyElement("Empty String")
-        case s => linkifyText(s)
+        case s => tryParseDate(s).map(d => span(formatDate(d))).getOrElse(linkifyText(s))
       },
 
       (xs: Vector[Json]) =>
