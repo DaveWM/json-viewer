@@ -29,16 +29,24 @@ object view {
     span(cls := "uk-label", label)
   }
 
+  def pathToString(path: List[String]): String = {
+    path.map(humanizeString(_)).mkString(" -> ")
+  }
+
+  def tooltipAttr(path: List[String], position: String = "left"): BasicAttr = {
+    attr("uk-tooltip") := s"title: ${pathToString(path)}; pos: $position; delay: 1000"
+  }
+
   def extractName(obj: JsonObject): Option[HtmlVNode] = {
     val nameProps = List("name", "title", "id")
     nameProps
       .find(p => obj.keys.exists(k => k.toLowerCase == p))
       .flatMap(k => obj(k))
       .filter(v => v.isNull || v.isBoolean || v.isString || v.isNumber)
-      .map(renderJson(_, 0))
+      .map(renderJson(_, List.empty))
   }
 
-  def renderJson(json: Json, level: Int): HtmlVNode =
+  def renderJson(json: Json, path: List[String] = List.empty): HtmlVNode =
     json.fold(
       emptyElement("Null"),
 
@@ -67,13 +75,22 @@ object view {
                     li(a(href := "#", title))
                 }
               ),
-              ul(cls := "uk-switcher uk-margin").apply(
-                xs.map(x => li(renderJson(x, level + 1)))
+              ul(cls := "uk-switcher uk-margin")(
+                xs.zipWithIndex.map {
+                  case (x, i) => li(renderJson(x, path :+ i.toString)(
+                    tooltipAttr(path :+ i.toString, "top")
+                  ))
+                }
               )
             )
           case xs if xs.length > 1 && xs.length < 5 && xs.forall(x => x.isNumber || x.isString || x.isBoolean || x.isNull) =>
             div(cls := "horiz-list").apply(
-              intersperse(xs.map(renderJson(_, level + 1)), span(", "))
+              intersperse(
+                xs.zipWithIndex.map {
+                  case (x, i) => renderJson(x, path :+ i.toString)(tooltipAttr(path :+ i.toString, "top"))
+                },
+                span(", ")
+              )
             )
           case xs if canRenderAsTable(xs) =>
             val childObjects: List[JsonObject] = xs.flatMap {
@@ -83,15 +100,26 @@ object view {
             table(
               cls := "uk-table uk-table-divider",
               tr.apply(props.map(s => th(humanizeString(s))).toList),
-              childObjects.map(o =>
-                tr.apply(
-                  props.map(p => td(o.toMap.get(p).map(renderJson(_, level + 1)).getOrElse(""))).toList
+              childObjects.zipWithIndex.map {
+                case (o, i) =>
+                  tr.apply(
+                  props.map(p => {
+                    val newPath = path :+ i.toString :+ p
+                    td(
+                      o.toMap.get(p)
+                        .map(renderJson(_, newPath)(tooltipAttr(newPath, "top")))
+                        .getOrElse("")
+                    )
+                  }
+                  ).toList
                 )
-              )
+              }
             )
           case x :: rest =>
-            ul(cls := "uk-list uk-list-bullet").apply(
-              xs.map(x => li(renderJson(x, level + 1))).toList
+            ul(cls := "uk-list uk-list-bullet")(
+              xs.zipWithIndex.map {
+                case (x, i) => li(renderJson(x, path :+ i.toString)(tooltipAttr(path :+ i.toString)))
+              }.toList
             )
         },
 
@@ -99,11 +127,11 @@ object view {
         if (o.isEmpty)
           emptyElement("Empty Object")
         else
-          dl(cls := s"uk-description-list json-object-display level-$level").apply(
+          dl(cls := s"uk-description-list json-object-display level-${path.length}")(
             o.toIterable.flatMap {
               case (k, v) => List(
                 dt(humanizeString(k)),
-                dd(div(renderJson(v, level + 1)))
+                dd(renderJson(v, path :+ k)(tooltipAttr(path :+ k)))
               )
             }.toList
           )
@@ -144,7 +172,7 @@ object view {
             state.json.map(json => {
               div(
                 cls := "uk-card uk-card-default uk-card-body json-display",
-                renderJson(json, 0)
+                renderJson(json, List.empty)
               )
             })
           )
