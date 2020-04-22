@@ -29,6 +29,15 @@ object view {
     span(cls := "uk-label", label)
   }
 
+  def extractName(obj: JsonObject): Option[HtmlVNode] = {
+    val nameProps = List("name", "title", "id")
+    nameProps
+      .find(p => obj.keys.exists(k => k.toLowerCase == p))
+      .flatMap(k => obj(k))
+      .filter(v => v.isNull || v.isBoolean || v.isString || v.isNumber)
+      .map(renderJson(_, 0))
+  }
+
   def renderJson(json: Json, level: Int): HtmlVNode =
     json.fold(
       emptyElement("Null"),
@@ -53,7 +62,9 @@ object view {
             div(
               ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
                 xs.zipWithIndex.map {
-                  case (value, idx) => li(a(href := "#", s"Item $idx"))
+                  case (value, idx) =>
+                    val title: HtmlVNode = value.asObject.flatMap(extractName).getOrElse(span(s"Item $idx"))
+                    li(a(href := "#", title))
                 }
               ),
               ul(cls := "uk-switcher uk-margin").apply(
