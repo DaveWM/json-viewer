@@ -1,12 +1,11 @@
 package jsonviewer
 
-import cats.effect.{IO, SyncIO}
-import cats.effect.implicits._
-import colibri.effect.RunSyncEffect
-import io.circe.generic.auto._
+import cats.effect.SyncIO
 import colibri.{Observable, Observer}
 import io.circe._
-import io.circe.parser._, io.circe.syntax._
+import io.circe.generic.auto._
+import io.circe.parser._
+import io.circe.syntax._
 import libs.humanizeString
 import outwatch._
 import outwatch.dsl._
@@ -16,7 +15,7 @@ import scala.collection.immutable._
 import scala.scalajs.js
 import scala.util.{Failure, Success, Try}
 
-case class Model(input: String, json: Option[Json])
+case class Model(input: String, json: Option[Json], error: Option[String])
 
 sealed trait Action
 
@@ -45,8 +44,8 @@ object Jsonviewer {
         case Init => (model, None)
         case InputChanged(text) =>
           val newModel = parse(text) match {
-            case Left(_) => model.copy(input=text)
-            case Right(json) => model.copy(input=text, json = Some(json))
+            case Left(err) => model.copy(input = text, error = Some(err.message))
+            case Right(json) => model.copy(input = text, json = Some(json), error = None)
           }
           (newModel, None)
       }
@@ -114,23 +113,24 @@ object Jsonviewer {
                   xs.map(x => li(renderJson(x, level + 1)))
                 )
                   )
-                case xs if xs.length < 5 && xs.forall(x => x.isNumber || x.isString || x.isBoolean || x.isNull) =>
-                  div(cls := "horiz-list").apply(
-                    intersperse(xs.map(renderJson(_, level + 1)), span(", "))
+            case xs if xs.length < 5 && xs.forall(x => x.isNumber || x.isString || x.isBoolean || x.isNull) =>
+              div(cls := "horiz-list").apply(
+                intersperse(xs.map(renderJson(_, level + 1)), span(", "))
+              )
+            case xs if canRenderAsTable(xs) =>
+              val childObjects: List[JsonObject] = xs.flatMap {
+                _.asObject
+              }
+              val props = getAllProps(childObjects)
+              table(
+                cls := "uk-table uk-table-divider",
+                tr.apply(props.map(s => th(humanizeString(s))).toList),
+                childObjects.map(o =>
+                  tr.apply(
+                    props.map(p => td(o.toMap.get(p).map(renderJson(_, level + 1)).getOrElse(""))).toList
                   )
-                case xs if canRenderAsTable(xs) => {
-                  val childObjects: List[JsonObject] = xs.flatMap { _.asObject }
-                  val props = getAllProps(childObjects)
-                  table(
-                    cls := "uk-table uk-table-divider",
-                    tr.apply(props.map(s => th(humanizeString(s))).toList),
-                    childObjects.map(o =>
-                      tr.apply(
-                        props.map(p => td(o.toMap.get(p).map(renderJson(_, level + 1)).getOrElse(""))).toList
-                      )
-                    )
+                )
                   )
-                }
             case x :: rest =>
               ul(cls := "uk-list uk-list-bullet").apply(
                 xs.map(x => li(renderJson(x, level + 1))).toList
@@ -176,6 +176,12 @@ object Jsonviewer {
                 onInput.value.map(InputChanged) --> dispatch,
                 value := state.input
               ),
+              state.error.map(e =>
+                div(
+                  cls := "uk-alert uk-alert-danger",
+                  p(e)
+                )
+              ),
               state.json.map(json => {
                 div(
                   cls := "uk-card uk-card-default uk-card-body json-display",
@@ -195,7 +201,7 @@ object Jsonviewer {
 
     val app = for {
       model <- getStateFromLocalStorage
-      store <- Store.create[SyncIO](Init, model.getOrElse(new Model("", None)), reducer)
+      store <- Store.create[SyncIO](Init, model.getOrElse(new Model("", None, None)), reducer)
       viewStream = store.map(am => view(am._2, store))
       _ = viewStream.foreach(_ => js.Dynamic.global.window.mdc.autoInit())
       _ = store.mapSync {
