@@ -4,5 +4,5 @@
   status = 200
 
 [build]
-  publish = "public"
+  publish = "assets"
   command = "bash build.sh"

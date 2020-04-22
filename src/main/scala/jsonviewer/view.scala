@@ -118,7 +118,8 @@ object view {
           div(
             cls := "uk-navbar-left",
             div(
-              cls := "uk-navbar-item uk-logo logo",
+              cls := "uk-navbar-item uk-logo logo header",
+              img(src := "/images/logo.png"),
               "JSON Viewer"
             )
           )
