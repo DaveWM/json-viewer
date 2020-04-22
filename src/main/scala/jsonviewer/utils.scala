@@ -7,6 +7,7 @@ import outwatch.dsl._
 
 import scala.scalajs.js
 import scala.scalajs.js.Date
+import scala.util.Try
 
 object utils {
   def intersperse[T](xs: List[T], separator: T): List[T] = {
@@ -38,7 +39,14 @@ object utils {
   }
 
   def tryParseDate(s: String): Option[date] = {
-    Option(js.Dynamic.global.Date.parse(s).asInstanceOf[date])
+    val maybeInt = Try {
+      Integer.parseInt(s);
+    }.toOption
+
+    maybeInt match {
+      case None => Option(js.Dynamic.global.Date.parse(s).asInstanceOf[date])
+      case Some(_) => None
+    }
   }
 
   def formatDate(d: date): String = {
