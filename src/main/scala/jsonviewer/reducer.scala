@@ -41,7 +41,10 @@ object reducer {
             case Left(err) => model.copy(input = text, error = Some(err.message))
             case Right(json) => model.copy(input = text, json = Some(json), error = None)
           }
-          (newModel, None)
+          if (text == "")
+            (newModel.copy(error = None, json = None), None)
+          else
+            (newModel, None)
         case SaveHTML => {
           model.json match {
             case Some(json) => {
