@@ -60,7 +60,14 @@ object view {
 
       {
         case "" => emptyElement("Empty String")
-        case s => tryParseDate(s).map(d => span(formatDate(d))).getOrElse(linkifyText(s))
+        case s => tryParseDate(s)
+          .map(d => span(formatDate(d)))
+          .getOrElse(span(
+            linkifyText(s).flatMap[VDomModifier] {
+              case StringVNode(s) => emailifyText(s)
+              case other => List(other)
+            }
+          ))
       },
 
       (xs: Vector[Json]) =>

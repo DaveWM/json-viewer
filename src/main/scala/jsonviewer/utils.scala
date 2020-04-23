@@ -22,20 +22,36 @@ object utils {
     xs.flatMap(_.keys).toSet
   }
 
-  def linkifyText(text: String): HtmlVNode = {
+  def linkifyText(text: String): List[VDomModifier] = {
     val linkRegex = "https?://[^\\s]+".r
-    val linkRegexLookahead = "(?=(https?://[^\\s]+))".r
-    span.apply(
-      linkRegexLookahead.split(text)
-        .flatMap[VDomModifier]((segment: String) => {
-            linkRegex.findFirstMatchIn(segment) match {
-              case Some(m) =>
-                val url = m.matched
-                List(a(href := url, target := "_blank", url), segment.replace(url, ""))
-              case None => List(segment)
-            }
-        })
-    )
+    val linkRegexLookahead = s"(?=($linkRegex))".r
+    linkRegexLookahead.split(text)
+      .flatMap[VDomModifier]((segment: String) => {
+        linkRegex.findFirstMatchIn(segment) match {
+          case Some(m) =>
+            val url = m.matched
+            List(a(href := url, target := "_blank", url), segment.replace(url, ""))
+          case None => List(segment)
+        }
+      })
+      .toList
+  }
+
+  def emailifyText(text: String): List[VDomModifier] = {
+    val emailRegex = "[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*".r
+    val emailRegexLookahead = s"\\s(?=($emailRegex))".r
+    emailRegexLookahead.split(text)
+      .flatMap[VDomModifier]((segment: String) => {
+        emailRegex.findFirstMatchIn(segment) match {
+          case Some(m) =>
+            val email = m.matched
+            List(" ", a(href := s"mailto:$email", email), segment.replace(email, ""))
+          case None => {
+            List(segment)
+          }
+        }
+      })
+      .toList
   }
 
   def tryParseDate(s: String): Option[date] = {
