@@ -1,3 +1,13 @@
+@font-face {
+    font-family: 'Marske';
+    src: url('/fonts/marske.ttf');
+}
+
+@font-face {
+    font-family: 'Exan Regular';
+    src: url('/fonts/Exan-Regular.ttf');
+}
+
 html, body {
     display: flex;
     flex: 1;
@@ -16,6 +26,8 @@ body {
 
 .main {
     text-align: center;
+    padding-top: 35px;
+    padding-bottom: 70px;
 }
 
 #header-bar {
@@ -88,7 +100,7 @@ body {
 }
 
 .header {
-    font-family: 'Quicksand', sans-serif;
+    font-family: 'Exan Regular', sans-serif !important;
     font-weight: 500;
     font-size: 35px !important;
     margin-left: 30px;
@@ -97,9 +109,14 @@ body {
 }
 
 .header img {
-    height: 35px;
+    height: 25px;
     color: white;
     margin-right: 15px;
+}
+
+.header-text {
+    padding-bottom: 2px;
+    font-size: 40px;
 }
 
 .json-object-display .kvp {

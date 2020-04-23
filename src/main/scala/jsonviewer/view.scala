@@ -73,6 +73,8 @@ object view {
       (xs: Vector[Json]) =>
         xs.toList match {
           case List() => emptyElement("Empty List")
+          case x :: Nil =>
+            renderJson(x, viewType, path :+ "0")
           case xs if xs.length > 1 && xs.length < 5 && xs.forall(_.isObject) =>
             div(
               ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
@@ -191,12 +193,12 @@ object view {
             div(
               cls := "uk-navbar-item uk-logo logo header",
               img(src := "/images/logo.png"),
-              "JSON Viewer"
+              span(cls := "header-text", "JSON Viewer")
             )
           )
         ),
         div(
-          cls := "uk-section main",
+          cls := "main",
           div(
             cls := "uk-container",
             textArea(
