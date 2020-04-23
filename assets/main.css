@@ -27,6 +27,12 @@ body {
     overflow: auto;
 }
 
+.control-button {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}
+
 .json-object-display {
     border-left: 1px solid;
     padding-left: 12px;

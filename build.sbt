@@ -21,7 +21,9 @@ scalaJSUseMainModuleInitializer := true
 scalacOptions += "-P:scalajs:sjsDefinedByDefault"
 useYarn := true // makes scalajs-bundler use yarn instead of npm
 npmDependencies in Compile ++= Seq(
-  "humanize-string" -> "2.1.0"
+  "humanize-string" -> "2.1.0",
+  "file-saver" -> "1.3.2",
+  "snabbdom-to-html" -> "2.1.3"
 )
 requireJsDomEnv in Test := true
 scalaJSUseMainModuleInitializer := true

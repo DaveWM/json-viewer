@@ -3,7 +3,12 @@ package jsonviewer
 import cats.effect.SyncIO
 import io.circe.parser._
 import jsonviewer.reducer.Model
-import io.circe.generic.auto._, io.circe.syntax._
+import io.circe.generic.auto._
+import io.circe.syntax._
+import libs.fileSaver
+import org.scalajs.dom.Blob
+import org.scalajs.dom.raw.BlobPropertyBag
+
 import scala.scalajs.js
 
 
@@ -20,5 +25,11 @@ object effects {
     SyncIO({
       val serialisedState = model.asJson
       js.Dynamic.global.localStorage.setItem(localStorageKey, serialisedState.toString())
+    })
+
+  def saveFile(contents: String, fileName: String): SyncIO[Unit] =
+    SyncIO({
+      val blob = new Blob(js.Array(contents), BlobPropertyBag("text/plain; charset=utf-8"))
+      fileSaver.saveAs(blob, fileName)
     })
 }

@@ -144,6 +144,27 @@ object view {
           )
     )
 
+  def savedHtmlView(json: Json): HtmlVNode = {
+    htmlTag("html")(
+      htmlTag("head")(
+        htmlTag("title")("JSON Viewer"),
+        htmlTag("link")(attr("rel") := "stylesheet", href := "https://json-viewer.io/main.css"),
+        htmlTag("link")(attr("rel") := "stylesheet", href := "https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;500&display=swap"),
+        htmlTag("link")(attr("rel") := "stylesheet", href := "https://cdn.jsdelivr.net/npm/uikit@3.4.1/dist/css/uikit.min.css"),
+        htmlTag("script")(src := "https://cdn.jsdelivr.net/npm/uikit@3.4.1/dist/js/uikit.min.js"),
+        htmlTag("script")(src := "https://cdn.jsdelivr.net/npm/uikit@3.4.1/dist/js/uikit-icons.min.js"),
+        htmlTag("link")(attr("rel") := "icon", href := "https://json-viewer.io/favicon.ico")
+      ),
+      htmlTag("body")(
+        div(
+          cls := "uk-container uk-section",
+          style("width") := "100%",
+          renderJson(json)
+        )
+      )
+    )
+  }
+
   def view(state: Model, dispatch: Observer[Action]): HtmlVNode = {
     val tryView: Try[HtmlVNode] = Try {
       div(
@@ -179,6 +200,11 @@ object view {
             state.json.map(json => {
               div(
                 cls := "uk-card uk-card-default uk-card-body json-display",
+                button(
+                  cls := "uk-button uk-button-default uk-button-small control-button",
+                  onClick.use(SaveHTML) --> dispatch,
+                  "Save HTML"
+                ),
                 renderJson(json, List.empty)
               )
             })

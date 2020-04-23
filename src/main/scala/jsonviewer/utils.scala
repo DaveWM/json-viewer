@@ -55,6 +55,9 @@ object utils {
   }
 
   def tryParseDate(s: String): Option[date] = {
+    if (s.length < 4)
+      return None
+
     val maybeInt = Try {
       Integer.parseInt(s);
     }.toOption
