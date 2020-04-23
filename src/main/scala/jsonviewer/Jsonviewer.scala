@@ -13,7 +13,7 @@ object Jsonviewer {
   def main(args: Array[String]): Unit = {
     val app = for {
       model <- getStateFromLocalStorage
-      store <- Store.create[SyncIO](Init, model.getOrElse(new Model("", None, None)), reducer)
+      store <- Store.create[SyncIO](Init, model.getOrElse(new Model("", None, None, Normal)), reducer)
       viewStream = store.map(am => view(am._2, store))
       _ = store.mapSync {
         case (action, model) => saveStateToLocalStorage(model)

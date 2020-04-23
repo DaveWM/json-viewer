@@ -37,16 +37,16 @@ object view {
     attr("uk-tooltip") := s"title: ${pathToString(path)}; pos: $position; delay: 1000"
   }
 
-  def extractName(obj: JsonObject): Option[HtmlVNode] = {
+  def extractName(viewType: ViewType, obj: JsonObject): Option[HtmlVNode] = {
     val nameProps = List("name", "title", "id")
     obj.keys
       .find(k => nameProps.contains(k.toLowerCase()))
       .flatMap(k => obj(k))
       .filter(v => v.isNull || v.isBoolean || v.isString || v.isNumber)
-      .map(renderJson(_, List.empty))
+      .map(renderJson(_, viewType, List.empty))
   }
 
-  def renderJson(json: Json, path: List[String] = List.empty): HtmlVNode =
+  def renderJson(json: Json, viewType: ViewType, path: List[String] = List.empty): HtmlVNode =
     json.fold(
       emptyElement("Null"),
 
@@ -78,13 +78,13 @@ object view {
               ul(attr("data-uk-tab") := "animation: uk-animation-fade").apply(
                 xs.zipWithIndex.map {
                   case (value, idx) =>
-                    val title: HtmlVNode = value.asObject.flatMap(extractName).getOrElse(span(s"Item $idx"))
+                    val title: HtmlVNode = value.asObject.flatMap(extractName(viewType, _)).getOrElse(span(s"Item $idx"))
                     li(a(href := "#", title))
                 }
               ),
               ul(cls := "uk-switcher uk-margin")(
                 xs.zipWithIndex.map {
-                  case (x, i) => li(renderJson(x, path :+ i.toString)(
+                  case (x, i) => li(renderJson(x, viewType, path :+ i.toString)(
                     tooltipAttr(path :+ i.toString, "top")
                   ))
                 }
@@ -94,7 +94,7 @@ object view {
             div(cls := "horiz-list").apply(
               intersperse(
                 xs.zipWithIndex.map {
-                  case (x, i) => renderJson(x, path :+ i.toString)(tooltipAttr(path :+ i.toString, "top"))
+                  case (x, i) => renderJson(x, viewType, path :+ i.toString)(tooltipAttr(path :+ i.toString, "top"))
                 },
                 span(", ")
               )
@@ -114,7 +114,7 @@ object view {
                     val newPath = path :+ i.toString :+ p
                     td(
                       o.toMap.get(p)
-                        .map(renderJson(_, newPath)(tooltipAttr(newPath, "top")))
+                        .map(renderJson(_, viewType, newPath)(tooltipAttr(newPath, "top")))
                         .getOrElse("")
                     )
                   }
@@ -125,7 +125,7 @@ object view {
           case x :: rest =>
             ul(cls := "uk-list uk-list-bullet")(
               xs.zipWithIndex.map {
-                case (x, i) => li(renderJson(x, path :+ i.toString)(tooltipAttr(path :+ i.toString)))
+                case (x, i) => li(renderJson(x, viewType, path :+ i.toString)(tooltipAttr(path :+ i.toString)))
               }.toList
             )
         },
@@ -134,17 +134,32 @@ object view {
         if (o.isEmpty)
           emptyElement("Empty Object")
         else
-          dl(cls := s"uk-description-list json-object-display level-${path.length}")(
-            o.toIterable.flatMap {
-              case (k, v) => List(
-                dt(humanizeString(k)),
-                dd(renderJson(v, path :+ k)(tooltipAttr(path :+ k)))
-              )
-            }.toList
+          div(cls := s"json-object-display level-${path.length}")(
+            viewType match {
+              case Compact =>
+                o.toIterable.map {
+                  case (k, v) => div(
+                    cls := "kvp",
+                    b(humanizeString(k)),
+                    renderJson(v, viewType, path :+ k)(tooltipAttr(path :+ k))
+                  )
+                }.toList
+              case Normal =>
+                dl(
+                  cls := "uk-description-list",
+                  o.toIterable.flatMap {
+                    case (k, v) => List(
+                      dt(humanizeString(k)),
+                      dd(renderJson(v, viewType, path :+ k)(tooltipAttr(path :+ k)))
+                    )
+                  }.toList
+                )
+            }
+
           )
     )
 
-  def savedHtmlView(json: Json): HtmlVNode = {
+  def savedHtmlView(json: Json, viewType: ViewType): HtmlVNode = {
     htmlTag("html")(
       htmlTag("head")(
         htmlTag("title")("JSON Viewer"),
@@ -159,7 +174,7 @@ object view {
         div(
           cls := "uk-container uk-section",
           style("width") := "100%",
-          renderJson(json)
+          renderJson(json, viewType)
         )
       )
     )
@@ -181,7 +196,7 @@ object view {
           )
         ),
         div(
-          cls := "uk-section",
+          cls := "uk-section main",
           div(
             cls := "uk-container",
             textArea(
@@ -190,6 +205,16 @@ object view {
               rows := 5,
               onInput.value.map(InputChanged) --> dispatch,
               value := state.input
+            ),
+            div(
+              cls := "uk-button-group view-controls",
+              button(
+                cls := "uk-button", cls := (if (state.viewType == Normal) "uk-button-primary" else "uk-button-default"),
+                onClick.use(SetViewType(Normal)) --> dispatch, "Normal"
+              ),
+              button(
+                cls := "uk-button", cls := (if (state.viewType == Compact) "uk-button-primary" else "uk-button-default"),
+                onClick.use(SetViewType(Compact)) --> dispatch, "Compact")
             ),
             state.error.map(e =>
               div(
@@ -205,7 +230,7 @@ object view {
                   onClick.use(SaveHTML) --> dispatch,
                   "Save HTML"
                 ),
-                renderJson(json, List.empty)
+                renderJson(json, state.viewType, List.empty)
               )
             })
           )
