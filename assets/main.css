@@ -30,6 +30,13 @@ body {
     padding-bottom: 70px;
 }
 
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+}
+
 #header-bar {
     background: deepskyblue;
 }
@@ -41,6 +48,7 @@ body {
 .view-controls {
     margin-top: 8px;
     margin-bottom: 10px;
+    align-self: center;
 }
 
 .json-display {
@@ -131,4 +139,8 @@ body {
     margin-right: 7px;
     color: rgb(110, 110, 110);
     text-transform: uppercase;
+}
+
+.banner-ad {
+    align-self: center;
 }
