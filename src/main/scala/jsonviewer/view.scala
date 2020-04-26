@@ -182,16 +182,6 @@ object view {
     )
   }
 
-  def bannerAd(): HtmlVNode =
-    div(
-      cls := "banner-ad",
-      htmlTag("script")(
-        attr("data-cfasync") := "false",
-        `type` := "text/javascript",
-        src := "//p393590.clksite.com/adServe/banners?tid=393590_773019_0"
-      )
-    )
-
   def view(state: Model, dispatch: Observer[Action]): HtmlVNode = {
     val tryView: Try[HtmlVNode] = Try {
       div(
@@ -228,7 +218,6 @@ object view {
                 cls := "uk-button", cls := (if (state.viewType == Compact) "uk-button-primary" else "uk-button-default"),
                 onClick.use(SetViewType(Compact)) --> dispatch, "Compact")
             ),
-            bannerAd(),
             state.error.map(e =>
               div(
                 cls := "uk-alert uk-alert-danger",
