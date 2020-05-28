@@ -13,7 +13,7 @@ import scala.scalajs.js
 
 
 object effects {
-  val localStorageKey = "json-viewer-state"
+  val localStorageKey = "json-viewer-state-2"
 
   def getStateFromLocalStorage: SyncIO[Option[Model]] =
     SyncIO({
