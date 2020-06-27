@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 
 object view {
   def canRenderAsTable(xs: List[Json]): Boolean = {
-    val allProps: Set[String] = getAllProps(xs.flatMap(_.asObject))
+    val allProps: List[String] = getAllProps(xs.flatMap(_.asObject))
 
     val sharedProps = allProps.filter(p => {
       xs.forall(_.asObject.exists(o => o.keys.toSet.contains(p)))
@@ -194,6 +194,17 @@ object view {
               cls := "uk-navbar-item uk-logo logo header",
               img(src := "/images/logo.png"),
               span(cls := "header-text", "JSON Viewer")
+            )
+          ),
+          div(
+            cls := "uk-navbar-right",
+            div(
+              cls := "uk-navbar-item",
+              a(
+                href := "https://davemartin.me",
+                target := "_blank",
+                img(src := "/images/dm-logo-small.png", cls := "company-logo")
+              )
             )
           )
         ),

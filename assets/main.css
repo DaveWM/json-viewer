@@ -39,10 +39,18 @@ body {
 
 #header-bar {
     background: deepskyblue;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
 }
 
 #header-bar .logo {
     color: white;
+}
+
+#header-bar .company-logo {
+    max-height: 35px;
+    margin-right: 25px;
 }
 
 .view-controls {
@@ -123,7 +131,7 @@ body {
 }
 
 .header-text {
-    padding-bottom: 2px;
+    transform: translateY(-2px);
     font-size: 40px;
 }
 

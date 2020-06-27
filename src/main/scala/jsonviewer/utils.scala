@@ -18,8 +18,8 @@ object utils {
     }
   }
 
-  def getAllProps(xs: List[JsonObject]): Set[String] = {
-    xs.flatMap(_.keys).toSet
+  def getAllProps(xs: List[JsonObject]): List[String] = {
+    xs.flatMap(_.keys)
   }
 
   def linkifyText(text: String): List[VDomModifier] = {
