@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 
 object view {
   def canRenderAsTable(xs: List[Json]): Boolean = {
-    val allProps: List[String] = getAllProps(xs.flatMap(_.asObject))
+    val allProps: Set[String] = getAllProps(xs.flatMap(_.asObject))
 
     val sharedProps = allProps.filter(p => {
       xs.forall(_.asObject.exists(o => o.keys.toSet.contains(p)))

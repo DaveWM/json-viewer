@@ -9,5 +9,5 @@ fi
 npm i -g yarn
 
 sbt fullOptJS::webpack
-cp target/scala-2.13/scalajs-bundler/main/repo-opt-bundle.js assets/main.js
+cp target/scala-2.13/scalajs-bundler/main/jsonviewer-opt-bundle.js assets/main.js
 mv assets/index.prod.html assets/index.html
