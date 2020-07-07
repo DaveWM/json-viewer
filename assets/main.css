@@ -53,6 +53,26 @@ body {
     margin-right: 25px;
 }
 
+@media only screen and (max-width: 650px) {
+    #header-bar {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .header, .uk-navbar-right, #header-bar .company-logo {
+        margin: 0 !important;
+    }
+
+    #header-bar .company-logo {
+        max-height: 25px;
+    }
+
+    .uk-navbar-item {
+        min-height: 45px !important;
+    }
+}
+
 .view-controls {
     margin-top: 8px;
     margin-bottom: 10px;
